@@ -25,8 +25,25 @@ private:
         }
         return rank;
     }
-
-    // Add your own private helper functions here.
+    
+    Node* traverse(Node* location, int x){
+        if (location == nullptr){
+            return nullptr;
+        }
+        else if (x < location->left->key)
+        {
+            return traverse(location->left, x);
+            
+        }
+        else if (x < location->right->key)
+        {
+            return traverse(location->right, x);
+        }
+        else {
+            return location;
+        }
+    }
+    // Add your own private helper functions here.  
 
 public:
     ZipTree() : root(nullptr) {
@@ -43,21 +60,143 @@ public:
 
     // Insert key x with a specified rank r.
     void insert_with_rank(int x, int r) {
-        // TODO
+        Node* parent = nullptr;
+        Node* current = root;
+        
+        while (current != nullptr && ((current->rank > r) || (current->rank == r && current->key < x))){
+            parent = current;
+            if (x < current->key) {
+                current = current->left;
+            } else {
+                current = current->right;
+            }
+        }
+        
+        Node* u = current;
+        Node* newNode = new Node(x, r);
+        Node* leftP = nullptr;
+        Node* rightQ = nullptr; 
+
+        while (u != nullptr) {
+            if (u->key < x) {
+                if (newNode->left == nullptr) {
+                    newNode->left = u;
+                    leftP = u;
+                } else {
+                    leftP->right = u;
+                    leftP = u;
+                }
+                u = u->right;
+            } else {
+                if (newNode->right == nullptr) {
+                    newNode->right = u;
+                    rightQ = u;
+                } else {
+                    rightQ->left = u;
+                    rightQ = u; 
+                }
+                u = u->left;
+            }
+        }
+        if (leftP != nullptr){
+            leftP->right = nullptr;
+        }
+        if (rightQ != nullptr) {
+            rightQ->left = nullptr;
+        }
+        if (parent == nullptr) {
+            root = newNode;
+        } else if (x < parent->key) {
+            parent->left = newNode;
+        } else {
+            parent->right = newNode;
+        }
     }
 
     // Delete the node with value x.
     void delete_val(int x) {
-      // TODO
+      Node* current = root;
+      Node* parent = nullptr;     
+      while(current->key != x){
+        parent = current;
+        if (x < current->key) {
+            current = current->left;
+        } 
+        else if (x > current->key) {
+            current = current->right;
+        }
+        else if (current == nullptr){
+            return;
+        }
+      }
+      Node* lt = current->left;
+      Node* rt = current->right; 
+      
+      while (lt != nullptr && rt != nullptr) {
+        if (lt->rank > rt->rank) {
+            if (parent == nullptr) {
+                root = lt;
+            } 
+            else if (parent->left == current) {
+                parent->left = lt;
+            } 
+            else {
+                parent->right = lt;
+            }
+            parent = lt;
+            lt = lt->right;
+        } 
+        else {
+            if (parent == nullptr) {
+                root = rt;
+            } 
+            else if (parent->left == current) {
+                parent->left = rt;
+            } 
+            else {
+                parent->right = rt;
+            }
+            parent = rt;
+            rt = rt->left;
+        }
+      }
+      
+      if (parent == nullptr) {
+        if (lt != nullptr) {
+            root = lt;
+        } else {
+            root = rt;
+        }
+      } else {
+        if (lt != nullptr) {
+            parent->right = lt;
+        } else {
+            parent->left = rt;
+        }
+      }
+      
+      delete current;
     }
 
     // Determine whether the tree contains x.
     bool contains(int x) {
-      // TODO
+      Node* current = root;
+      while (current != nullptr){
+        if (x == current->key){
+            return true;
+        }
+        else if (x < current->key){
+            current = current->left;
+        }
+        else {
+            current = current->right;
+        }
+      }
+      return false;
     }
 
-    void printcontains(int x) {
-      if contains(x){
+    void printcontains(int x){
+      if (contains(x)){
         std::cout <<"true" << std::endl;
       }
       else {
@@ -68,7 +207,19 @@ public:
     // Finds the depth of the node x in the tree.
     // If it's not in the tree, then return -1.
     int getdepth(int x) {
-        // TODO
+        Node* current = root;
+        int depth = 0;
+        while (current != nullptr) {
+            if (x == current->key) {
+                return depth;
+            } else if (x < current->key) {
+                current = current->left;
+            } else {
+                current = current->right;
+            }
+            depth++;
+        }
+        return -1;
     }
 
     void printdepth(int x) {
@@ -120,4 +271,3 @@ int main() {
     }
     return 0;
 }
-
