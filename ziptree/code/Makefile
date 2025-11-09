@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -Wextra -O2
 TARGET = ziptree
-SRC = code/ziptree.cpp
+SRC = ziptree.cpp
 
 all: $(TARGET)
 
