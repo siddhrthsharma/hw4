@@ -26,29 +26,23 @@ private:
         return rank;
     }
     
-    Node* traverse(Node* location, int x){
-        if (location == nullptr){
-            return nullptr;
+    void deleteTree(Node* node) {
+        if (node == nullptr) {
+            return;
         }
-        else if (x < location->left->key)
-        {
-            return traverse(location->left, x);
-            
-        }
-        else if (x < location->right->key)
-        {
-            return traverse(location->right, x);
-        }
-        else {
-            return location;
-        }
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
     }
-    // Add your own private helper functions here.  
 
 public:
     ZipTree() : root(nullptr) {
         // Seed the random number generator once.
         srand(static_cast<unsigned int>(time(nullptr)));
+    }
+
+    ~ZipTree() {
+        deleteTree(root);
     }
 
     // Functions for you to implement:
@@ -63,7 +57,12 @@ public:
         Node* parent = nullptr;
         Node* current = root;
         
-        while (current != nullptr && ((current->rank > r) || (current->rank == r && current->key < x))){
+        // Search down until we find position where new node should go
+        // Stop when: current.rank < r OR (current.rank == r AND current.key >= x)
+        while (current != nullptr && (current->rank > r || (current->rank == r && current->key < x))) {
+            if (x == current->key) {
+                return; // Key already exists
+            }
             parent = current;
             if (x < current->key) {
                 current = current->left;
@@ -72,43 +71,67 @@ public:
             }
         }
         
+        // Check if key already exists in subtree below
         Node* u = current;
+        while (u != nullptr) {
+            if (u->key == x) {
+                return;
+            }
+            if (x < u->key) {
+                u = u->left;
+            } else {
+                u = u->right;
+            }
+        }
+        
+        // Unzip: split current subtree into left path P and right path Q
+        u = current;
         Node* newNode = new Node(x, r);
         Node* leftP = nullptr;
         Node* rightQ = nullptr; 
 
         while (u != nullptr) {
             if (u->key < x) {
+                // Node goes to left path P
                 if (newNode->left == nullptr) {
                     newNode->left = u;
                     leftP = u;
-                } else {
+                } 
+                else {
                     leftP->right = u;
                     leftP = u;
                 }
                 u = u->right;
             } else {
+                // Node goes to right path Q
                 if (newNode->right == nullptr) {
                     newNode->right = u;
                     rightQ = u;
-                } else {
+                } 
+                else {
                     rightQ->left = u;
                     rightQ = u; 
                 }
                 u = u->left;
             }
         }
-        if (leftP != nullptr){
+        
+        // Clean up ends of paths
+        if (leftP != nullptr) {
             leftP->right = nullptr;
         }
         if (rightQ != nullptr) {
             rightQ->left = nullptr;
         }
+        
+        // Connect new node to parent
         if (parent == nullptr) {
             root = newNode;
-        } else if (x < parent->key) {
+        } 
+        else if (x < parent->key) {
             parent->left = newNode;
-        } else {
+        } 
+        else {
             parent->right = newNode;
         }
     }
@@ -116,66 +139,109 @@ public:
     // Delete the node with value x.
     void delete_val(int x) {
       Node* current = root;
-      Node* parent = nullptr;     
-      while(current->key != x){
+      Node* parent = nullptr;
+      
+      // Search for node with key x
+      while(current != nullptr && current->key != x){
         parent = current;
         if (x < current->key) {
             current = current->left;
         } 
-        else if (x > current->key) {
+        else {
             current = current->right;
         }
-        else if (current == nullptr){
-            return;
-        }
       }
-      Node* lt = current->left;
-      Node* rt = current->right; 
       
-      while (lt != nullptr && rt != nullptr) {
-        if (lt->rank > rt->rank) {
-            if (parent == nullptr) {
-                root = lt;
-            } 
-            else if (parent->left == current) {
-                parent->left = lt;
+      if (current == nullptr) {
+          return; // Node not found
+      }
+      
+      Node* deleting = current; 
+      Node* left = current->left;
+      Node* right = current->right; 
+      Node* newRoot = nullptr;
+      Node* tail = nullptr;
+      
+      // Zip: merge left and right subtrees
+      // Walk down right spine of left subtree and left spine of right subtree
+      // Merge them in decreasing rank order
+      while (left != nullptr && right != nullptr) {
+        // Choose node with higher rank (or smaller key if ranks are equal)
+        if (left->rank > right->rank || (left->rank == right->rank && left->key < right->key)) {
+            if (newRoot == nullptr) {
+                newRoot = left;
             } 
             else {
-                parent->right = lt;
+                // Place based on key comparison with tail
+                if (left->key < tail->key) {
+                    tail->left = left;
+                } 
+                else {
+                    tail->right = left;
+                }
             }
-            parent = lt;
-            lt = lt->right;
+            tail = left;
+            left = left->right; // Continue down right spine of left subtree
         } 
         else {
-            if (parent == nullptr) {
-                root = rt;
-            } 
-            else if (parent->left == current) {
-                parent->left = rt;
+            if (newRoot == nullptr) {
+                newRoot = right;
             } 
             else {
-                parent->right = rt;
+                // Place based on key comparison with tail
+                if (right->key < tail->key) {
+                    tail->left = right;
+                } 
+                else {
+                    tail->right = right;
+                }
             }
-            parent = rt;
-            rt = rt->left;
+            tail = right;
+            right = right->left; // Continue down left spine of right subtree
         }
       }
       
+      // Attach remaining nodes
+      if (tail != nullptr) {
+        if (left != nullptr) {
+            if (left->key < tail->key) {
+                tail->left = left;
+            } 
+            else {
+                tail->right = left;
+            }
+        } 
+        else if (right != nullptr) {
+            if (right->key < tail->key) {
+                tail->left = right;
+            } 
+            else {
+                tail->right = right;
+            }
+        }
+      } 
+      else {
+        // One or both subtrees were empty
+        if (left != nullptr) {
+            newRoot = left;
+        } 
+        else {
+            newRoot = right;
+        }
+      }
+      
+      // Replace deleted node with merged result
       if (parent == nullptr) {
-        if (lt != nullptr) {
-            root = lt;
-        } else {
-            root = rt;
-        }
-      } else {
-        if (lt != nullptr) {
-            parent->right = lt;
-        } else {
-            parent->left = rt;
-        }
+        root = newRoot;
+      } 
+      else if (parent->left == deleting) {
+        parent->left = newRoot;
+      } 
+      else {
+        parent->right = newRoot;
       }
       
-      delete current;
+      delete deleting;
     }
 
     // Determine whether the tree contains x.
@@ -205,16 +271,17 @@ public:
     }
 
     // Finds the depth of the node x in the tree.
-    // If it's not in the tree, then return -1.
     int getdepth(int x) {
         Node* current = root;
         int depth = 0;
         while (current != nullptr) {
             if (x == current->key) {
                 return depth;
-            } else if (x < current->key) {
+            } 
+            else if (x < current->key) {
                 current = current->left;
-            } else {
+            } 
+            else {
                 current = current->right;
             }
             depth++;
